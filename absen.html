@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aplikasi Presensi Barcode</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: url('92b7fff0-7063-47bf-b467-0eae8013a75c.png') no-repeat center center fixed;
+      background-size: cover;
+      margin: 0;
+      padding: 0;
+      color: #fff;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      background: rgba(0, 0, 0, 0.75);
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.6);
+      animation: fadeIn 1s ease-in-out;
+    }
+
+    h2, h3 {
+      text-align: center;
+    }
+
+    input, select, button {
+      padding: 10px;
+      margin: 10px 0;
+      width: 100%;
+      border-radius: 8px;
+      border: none;
+      font-size: 15px;
+    }
+
+    button {
+      background: linear-gradient(45deg, #f39c12, #e67e22);
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: #fff;
+      color: #000;
+    }
+
+    table, th, td {
+      border: 1px solid #ddd;
+    }
+
+    th, td {
+      padding: 10px;
+      text-align: center;
+    }
+
+    /* Popup animasi */
+    .popup {
+      visibility: hidden;
+      position: fixed;
+      left: 50%;
+      top: 20%;
+      transform: translateX(-50%);
+      background: #27ae60;
+      color: #fff;
+      padding: 15px 25px;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: bold;
+      opacity: 0;
+      transition: opacity 0.8s ease, top 0.8s ease;
+      z-index: 1000;
+    }
+
+    .popup.show {
+      visibility: visible;
+      opacity: 1;
+      top: 30%;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Aplikasi Presensi</h2>
+
+    <!-- Login Form -->
+    <div id="loginForm">
+      <h3>Login Karyawan</h3>
+      <select id="nama" onchange="isiNIK()">
+        <option value="">-- Pilih Nama --</option>
+      </select>
+      <input type="text" id="nik" placeholder="NIK Pegawai" readonly>
+      <button onclick="login()">Login</button>
+    </div>
+
+    <!-- Absen Section -->
+    <div id="absenSection" style="display:none;">
+      <h3 id="welcomeText"></h3>
+      <button onclick="absenKaryawan('Hadir')">Absen Hadir</button>
+      <button onclick="absenKaryawan('Pulang')">Absen Pulang</button>
+
+      <h3>Data Absensi</h3>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Nama</th>
+              <th>NIK</th>
+              <th>Tanggal</th>
+              <th>Jam Hadir</th>
+              <th>Jam Pulang</th>
+            </tr>
+          </thead>
+          <tbody id="karyawanTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popup -->
+  <div id="popup" class="popup"></div>
+
+  <script>
+    // Data karyawan dari Excel
+    const karyawanData = [
+      { nama: "SOLIKIN", nik: "3374041004800004" },
+      { nama: "SUNARTO", nik: "3374063012720007" },
+      { nama: "ROCHMAD", nik: "3374041209650002" },
+      { nama: "AGUS SUMARYONO", nik: "3374031707690001" },
+      { nama: "GUNAWAN", nik: "3374042404760004" },
+      { nama: "SATYA ADIGUNA", nik: "3322102208960001" },
+      { nama: "JUMELAN", nik: "3322071104890001" },
+      { nama: "LESTANTO", nik: "3322100711710003" },
+      { nama: "DWI HENDRO WIBOWO", nik: "3322041809720004" },
+      { nama: "WAHYONO", nik: "3322102107790000" },
+      { nama: "HANDONO", nik: "3322101310700002" },
+      { nama: "AGUS BUDIYANTO", nik: "3374161408900001" },
+      { nama: "SURIS WIGIYANTO", nik: "3374081103750002" },
+      { nama: "MUAMAR KADAFI", nik: "3315191203820001" },
+      { nama: "AHMAD RITAUDIN", nik: "3315192411850001" },
+      { nama: "SUPRIYADI", nik: "3374140908850004" },
+      { nama: "SURYONO", nik: "3374140908850004" },
+      { nama: "TEGUH SULISTIONO", nik: "3315180210950002" },
+      { nama: "DITO HANAFI ADINUGROHO", nik: "3374102706010002" },
+      { nama: "CHELSEA SENAL", nik: "3374091305050002" },
+      { nama: "SLAMET RIYADI", nik: "3374030110730004" },
+      { nama: "PARIYANTO", nik: "3322042204770003" },
+      { nama: "ANDRE BAGUS WICAKSONO", nik: "3374041204960002" },
+      { nama: "MUSBIKIN", nik: "3321050707670006" },
+      { nama: "PISDI", nik: "3321050205800005" },
+      { nama: "SUTARNO", nik: "3374072503960003" },
+      { nama: "SUTRISNO", nik: "3322081806730004" },
+      { nama: "NUR BANGSA GALIH", nik: "3314110505020001" },
+      { nama: "ANDRE PUTRA PAMUNGKAS", nik: "3314100508050001" },
+      { nama: "SUHARTONO", nik: "3374060707800005" },
+      { nama: "BENNY RANO PRASETYO", nik: "3374132903980007" },
+      { nama: "TOMAS DENOTENG SOEWITO", nik: "3374131209890003" },
+      { nama: "SUPRIYANTO", nik: "3374102507750003" },
+      { nama: "RUDI HARTONO", nik: "3374032003870003" },
+      { nama: "RIO GAUTAMA", nik: "3374150608870002" }
+    ];
+
+    let currentUser = null;
+
+    // Isi dropdown nama
+    const selectNama = document.getElementById("nama");
+    karyawanData.forEach(k => {
+      const opt = document.createElement("option");
+      opt.value = k.nama;
+      opt.textContent = k.nama;
+      selectNama.appendChild(opt);
+    });
+
+    function isiNIK() {
+      const selectedNama = document.getElementById("nama").value;
+      const nikField = document.getElementById("nik");
+      const karyawan = karyawanData.find(k => k.nama === selectedNama);
+      nikField.value = karyawan ? karyawan.nik : "";
+    }
+
+    function login() {
+      const nama = document.getElementById("nama").value;
+      const nik = document.getElementById("nik").value;
+
+      if (nama && nik) {
+        currentUser = { nama, nik };
+        document.getElementById("loginForm").style.display = "none";
+        document.getElementById("absenSection").style.display = "block";
+        document.getElementById("welcomeText").innerText =
+          "Selamat datang, " + nama + " (NIK: " + nik + ")";
+      } else {
+        showPopup("Harap pilih nama terlebih dahulu!");
+      }
+    }
+
+    function absenKaryawan(status) {
+      const table = document.getElementById("karyawanTable");
+      const today = new Date().toLocaleDateString();
+      const time = new Date().toLocaleTimeString();
+
+      let row = [...table.rows].find(r =>
+        r.cells[0].innerText === currentUser.nama && r.cells[2].innerText === today
+      );
+
+      if (!row) {
+        const newRow = table.insertRow();
+        newRow.insertCell(0).innerText = currentUser.nama;
+        newRow.insertCell(1).innerText = currentUser.nik;
+        newRow.insertCell(2).innerText = today;
+        newRow.insertCell(3).innerText = status === "Hadir" ? time : "-";
+        newRow.insertCell(4).innerText = status === "Pulang" ? time : "-";
+        showPopup("Absen " + status + " berhasil!");
+      } else {
+        if (status === "Pulang" && row.cells[4].innerText === "-") {
+          row.cells[4].innerText = time;
+          showPopup("Terima kasih, pulang berhasil dicatat!");
+        } else {
+          showPopup("Anda sudah absen " + status + " hari ini!");
+        }
+      }
+    }
+
+    function showPopup(message) {
+      const popup = document.getElementById("popup");
+      popup.innerText = message;
+      popup.classList.add("show");
+      setTimeout(() => {
+        popup.classList.remove("show");
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
